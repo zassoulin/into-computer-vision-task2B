@@ -76,6 +76,14 @@ class CaptioningTransformer(nn.Module):
         N, T = captions.shape
         # Create a placeholder, to be overwritten by your code below.
         scores = torch.empty((N, T, self.vocab_size))
+        mask = torch.tril(torch.ones(T, T))
+        captions_embedding = self.embedding(captions)
+        captions_embedding = self.positional_encoding(captions_embedding)
+        image_embedding = self.visual_projection(features).unsqueeze(1)
+        out = self.transformer(captions_embedding, image_embedding, mask)
+        scores = self.output(out)
+
+
         ############################################################################
         # TODO: Implement the forward function for CaptionTransformer.             #
         # A few hints:                                                             #
