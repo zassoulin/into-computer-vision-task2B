@@ -28,6 +28,11 @@ class PositionalEncoding(nn.Module):
         # Create an array with a "batch dimension" of 1 (which will broadcast
         # across all examples in the batch).
         pe = torch.zeros(1, max_len, embed_dim)
+        indexes = torch.arange(max_len).unsqueeze(1)
+        inside_con_or_sin_func = torch.exp(torch.arange(0, embed_dim, 2) * (-math.log(10000) / embed_dim) )
+        pe[0, :, 0::2] = torch.sin(indexes * inside_con_or_sin_func)
+        pe[0, :, 1::2] = torch.cos(indexes * inside_con_or_sin_func)
+
         ############################################################################
         # TODO: Construct the positional encoding array as described in            #
         # Transformer_Captioning.ipynb.  The goal is for each row to alternate     #
@@ -59,6 +64,8 @@ class PositionalEncoding(nn.Module):
         N, S, D = x.shape
         # Create a placeholder, to be overwritten by your code below.
         output = torch.empty((N, S, D))
+        output = x + self.pe[:, :S, :]
+        output = self.dropout(output)
         ############################################################################
         # TODO: Index into your array of positional encodings, and add the         #
         # appropriate ones to the input sequence. Don't forget to apply dropout    #
@@ -139,26 +146,22 @@ class MultiHeadAttention(nn.Module):
         """
         N, S, E = query.shape
         N, T, E = value.shape
-        # Create a placeholder, to be overwritten by your code below.
-        output = torch.empty((N, S, E))
-        ############################################################################
-        # TODO: Implement multiheaded attention using the equations given in       #
-        # Transformer_Captioning.ipynb.                                            #
-        # A few hints:                                                             #
-        #  1) You'll want to split your shape from (N, T, E) into (N, T, H, E/H),  #
-        #     where H is the number of heads.                                      #
-        #  2) The function torch.matmul allows you to do a batched matrix multiply.#
-        #     For example, you can do (N, H, T, E/H) by (N, H, E/H, T) to yield a  #
-        #     shape (N, H, T, T). For more examples, see                           #
-        #     https://pytorch.org/docs/stable/generated/torch.matmul.html          #
-        #  3) For applying attn_mask, think how the scores should be modified to   #
-        #     prevent a value from influencing output. Specifically, the PyTorch   #
-        #     function masked_fill may come in handy.                              #
-        ############################################################################
+        q = self.query(query)
+        k = self.key(key)
+        v = self.value(value)
+        q = q.view(N, S, self.n_head, self.head_dim).transpose(1, 2)
+        k = k.view(N, T, self.n_head, self.head_dim).transpose(1, 2)
+        v = v.view(N, T, self.n_head, self.head_dim).transpose(1, 2)
+        score = torch.matmul(q, k.transpose(2, 3))
+        if attn_mask is not None:
+            score = score.masked_fill(attn_mask == 0, -torch.inf)
+        score = score / (self.head_dim ** 0.5)
 
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        attention_score = self.attn_drop(torch.softmax(score, dim=-1))
+        attention_v = torch.matmul(attention_score, v)
+        attention_v = attention_v.transpose(1, 2).contiguous() #I learned something new today transpose doesn't change the order only the metadata contiguous() applies it
+        attention_v = attention_v.view(N, S, E)
+        output = self.proj(attention_v)
         return output
 
 
