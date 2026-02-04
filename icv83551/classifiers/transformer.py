@@ -252,6 +252,10 @@ class VisionTransformer(nn.Module):
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-
+        embedding = self.patch_embed(x)
+        embedding = self.positional_encoding(embedding)
+        attention = self.transformer(embedding)
+        attention_avrg = torch.mean(attention, dim=1)
+        logits = self.head(attention_avrg)
 
         return logits

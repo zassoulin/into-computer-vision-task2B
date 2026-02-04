@@ -303,19 +303,10 @@ class PatchEmbedding(nn.Module):
         assert H == self.img_size and W == self.img_size, \
             f"Expected image size ({self.img_size}, {self.img_size}), but got ({H}, {W})"
         out = torch.zeros(N, self.embed_dim)
-
-        ############################################################################
-        # TODO: Divide the image into non-overlapping patches of shape             #
-        # (C x patch_size x patch_size), and rearrange them into a tensor of       #
-        # shape (N, num_patches, patch_dim). Do not use a for-loop.                #
-        # Instead, you may find torch.reshape and torch.permute helpful for this   #
-        # step. Once the patches are flattened, embed them into latent vectors     #
-        # using the projection layer.                                              #
-        ############################################################################
-
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        x_reshaped = x.view(N, C, H // self.patch_size, self.patch_size, W // self.patch_size, self.patch_size)
+        x_reshaped = x_reshaped.permute(0, 2, 4, 1, 3, 5)
+        x_reshaped = x_reshaped.reshape(N, self.num_patches, self.patch_dim)
+        out = self.proj(x_reshaped)
         return out
 
 
@@ -356,12 +347,10 @@ class TransformerEncoderLayer(nn.Module):
         Returns:
         - out: the Transformer features, of shape (N, S, D)
         """
-        ############################################################################
-        # TODO: Implement the encoder layer by applying self-attention followed    #
-        # by a feedforward block. This code will be very similar to decoder layer. #
-        ############################################################################
-
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        attention = self.self_attn(src, src, src, src_mask)
+        attention = self.dropout_self(attention)
+        normalized_attention = self.norm_self(src + attention)
+        feed_forward = self.ffn(normalized_attention)
+        feed_forward = self.dropout_ffn(feed_forward)
+        src = self.norm_ffn(normalized_attention + feed_forward)
         return src
