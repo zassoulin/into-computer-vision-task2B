@@ -18,7 +18,7 @@ def sim(z_i, z_j):
     #                                                                            #
     # HINT: torch.linalg.norm might be helpful.                                  #
     ##############################################################################
-    norm_dot_product = torch.dot(z_i, z_j.T) / (torch.linalg.norm(z_i)*torch.linalg.norm(z_j)) 
+    norm_dot_product = torch.dot(z_i, z_j.T) / (torch.linalg.norm(z_i)*torch.linalg.norm(z_j))
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################

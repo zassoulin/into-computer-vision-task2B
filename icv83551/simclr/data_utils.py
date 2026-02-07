@@ -51,10 +51,8 @@ class CIFAR10Pair(CIFAR10):
             #                                                                            #
             # Apply self.transform to the image to produce x_i and x_j in the paper #
             ##############################################################################
-            pass
-            ##############################################################################
-            #                               END OF YOUR CODE                             #
-            ##############################################################################
+            x_i = self.transform(img)
+            x_j = self.transform(img)
 
         if self.target_transform is not None:
             target = self.target_transform(target)
