@@ -227,7 +227,10 @@ class Unet(nn.Module):
         cfg_scale = model_kwargs.pop("cfg_scale")
         print("Classifier-free guidance scale:", cfg_scale)
         model_kwargs = copy.deepcopy(model_kwargs)
-
+        out = self.forward(x , time , model_kwargs)
+        model_kwargs["text_emb"] = None
+        cfg_out = self.forward(x , time , model_kwargs)
+        x = (cfg_scale + 1) * out - cfg_out * cfg_scale
         ##################################################################
         # TODO: Apply classifier-free guidance using Eq. (6) from
         # https://arxiv.org/pdf/2207.12598 i.e.
