@@ -1,4 +1,4 @@
-from tensorflow.python.framework.ops import device_v2
+# from tensorflow.python.framework.ops import device_v2
 import torch
 import torch.nn as nn
 import numpy as np
@@ -30,7 +30,9 @@ def get_similarity_no_loop(text_features, image_features):
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
-
+    text_features = text_features / text_features.norm(dim=1, keepdim=True)
+    image_features = image_features / image_features.norm(dim=1, keepdim=True)
+    similarity = torch.matmul(text_features, image_features.T)
     return similarity
 
 
@@ -62,7 +64,13 @@ def clip_zero_shot_classifier(clip_model, clip_preprocess, images,
     ############################################################################
     # TODO: Find the class labels for images.                                  #
     ############################################################################
-
+    pre_processed_images = torch.stack([clip_preprocess(Image.fromarray(img)) for img in images]).to(device)
+    image_features = clip_model.encode_image(pre_processed_images)
+    tokens = clip.tokenize(class_texts).to(device)
+    text_features = clip_model.encode_text(tokens).to(device)
+    similarity = get_similarity_no_loop(text_features, image_features)
+    indexes = similarity.argmax(dim=0)
+    pred_classes = [class_texts[i] for i in indexes]
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
