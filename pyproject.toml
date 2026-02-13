@@ -1,0 +1,53 @@
+[project]
+name = "intro-computer-vision-task2b"
+version = "0.0.10"
+description = "requirments for the project"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "accelerate>=0.27.0",
+    "diffusers>=0.26.0",
+    "imageio>=2.30.0",
+    "ipykernel>=6.29.0",
+    "ipython>=8.20.0",
+    "jupyter>=1.0.0",
+    "matplotlib>=3.8.0",
+    "notebook>=7.0.0",
+    "opencv-python>=4.9.0",
+    "safetensors>=0.4.0",
+    "torch==2.2.2",
+    "torchvision==0.17.2",
+    "transformers>=4.38.0",
+    "numpy<2.0",
+    "h5py==3.10.0",
+    "scipy==1.12.0",
+    "ultralytics-thop>=2.0.18",
+    "pandas>=3.0.0",
+    "pandas-stubs>=3.0.0.260204",
+    "wheel",
+    "setuptools<70",
+    "clip @ git+https://github.com/openai/CLIP.git",
+    "joblib>=1.5.3",
+    "einops>=0.8.2",
+    "ddpm>=1.0.0",
+    "ftfy>=6.3.1",
+    "regex>=2026.1.15",
+    "tqdm>=4.67.3",
+    "decord>=0.6.0",
+    "scikit-learn>=1.8.0",
+    "tensorflow-cpu>=2.17.1",
+    "tensorflow-datasets>=4.9.9",
+]
+[tool.uv]
+no-build-isolation-package = ["clip"]
+
+[tool.uv.extra-build-dependencies]
+clip = ["setuptools<70", "wheel"]
+
+[[tool.uv.index]]
+name = "pytorch_cuda"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch_cuda" }
+torchvision = { index = "pytorch_cuda" }
