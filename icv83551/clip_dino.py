@@ -98,12 +98,17 @@ class CLIPImageRetriever:
         # computation for each text query. You may end up NOT using the above      #
         # similarity function for most compute-optimal implementation.#
         ############################################################################
-
+        self.clip_model = clip_model
+        self.clip_preprocess = clip_preprocess
+        self.device = device
+        pre_processed_images = torch.stack([clip_preprocess(Image.fromarray(img)) for img in images]).to(device)
+        image_features = clip_model.encode_image(pre_processed_images)
+        image_features = image_features / image_features.norm(dim=1, keepdim=True)
+        self.image_features = image_features
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-        pass
-    
+
     @torch.no_grad()
     def retrieve(self, query: str, k: int = 2):
         """
@@ -118,6 +123,13 @@ class CLIPImageRetriever:
             List[int]: Indices of the top-k most similar images.
         """
         top_indices = []
+
+        tokens = clip.tokenize([query]).to(self.device)
+        text_features = self.clip_model.encode_text(tokens).to(self.device)
+        text_features = text_features / text_features.norm(dim=1, keepdim=True)
+        similarity = torch.matmul(text_features, self.image_features.T)
+        _, indexes = similarity[0].topk(k)
+        top_indices = list(indexes)
         ############################################################################
         # TODO: Retrieve the indices of top-k images.                              #
         ############################################################################
