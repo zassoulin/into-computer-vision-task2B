@@ -164,8 +164,24 @@ class GaussianDiffusion(nn.Module):
         """
         t = torch.full((x_t.shape[0],), t, device=x_t.device, dtype=torch.long)  # (b,)
         x_tm1 = None  # sample x_{t-1} from p(x_{t-1} | x_t)
+        out = self.model(x_t, t, model_kwargs)
+        noise = torch.randn_like(x_t)
+        if self.objective == "pred_noise":
+            x_start = self.predict_start_from_noise(x_t, t, out)
+        elif self.objective == "pred_x_start":
+            x_start = out
+        else:
+            print(f"unknoiwn objective - {self.objective}")
+            raise ValueError("unknoiwn objective - {self.objective}")
+        x_start = torch.clamp(x_start , -1, 1)
+        mean , std = self.q_posterior(x_start, x_t, t)
+        mask = (t > 0).float()
+        mask = mask.reshape(-1, 1, 1, 1)
+        x_tm1 = std * noise * mask + mean
 
-        ##################################################################
+
+        ################################################################
+        # ##
         # TODO: Implement the sampling step p(x_{t-1} | x_t) according to Eq. (6):
         #
         # - Steps:
@@ -180,6 +196,7 @@ class GaussianDiffusion(nn.Module):
         ##################################################################
         
         ##################################################################
+
 
         return x_tm1
 
@@ -236,7 +253,9 @@ class GaussianDiffusion(nn.Module):
         # Finally, compute the weighted MSE loss.
         # Approximately 3-4 lines of code.
         ####################################################################
-
+        x_t = self.q_sample(x_start, t, noise=noise)
+        out = self.model(x_t, t, model_kwargs)
+        loss = (((out - target) ** 2)* loss_weight).mean()
         ####################################################################
 
         return loss
