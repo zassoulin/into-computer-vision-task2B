@@ -208,17 +208,9 @@ class GaussianDiffusion(nn.Module):
         """
 
         x_t = None
-        ####################################################################
-        # TODO:
-        # Implement sampling from q(x_t | x_0) according to Eq. (4) of the paper.
-        # Hints: (1) Look at the `__init__` method to see precomputed coefficients.
-        # (2) Use the `extract` function defined above to extract the coefficients
-        # for the given time step `t`. (3) Recall that sampling from N(mu, sigma^2)
-        # can be done as: x_t = mu + sigma * noise where noise is sampled from N(0, 1).
-        # Approximately 3 lines of code.
-        ####################################################################
-
-        ####################################################################
+        alpah_coefficients =  extract(self.sqrt_alphas_cumprod, t, x_start.shape)
+        alpah_minus_one_coefficients = extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape)
+        x_t = alpah_coefficients * x_start + alpah_minus_one_coefficients * noise
         return x_t
 
     def p_losses(self, x_start, model_kwargs={}):
