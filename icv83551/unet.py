@@ -293,19 +293,18 @@ class Unet(nn.Module):
         ##################################################################
 
         ##################################################################
-        layers , x = self.downsample(x, time)
+        layers , x = self.downsample(x, context)
         x = self.mid_block1(x, context = context)
         x = self.mid_block2(x, context = context)
-        x = self.upsample(x, time, layers)
+        x = self.upsample(x, context, layers)
 
 
         # Final block
         x = self.final_conv(x)
 
         return x
-    def downsample(self, x, time):
+    def downsample(self, x, context):
         layers_values = []
-        context = self.time_mlp(time)
         for res1 , res2 , down in self.downs:
             x = res1(x, context = context)
             layers_values.append(x)
@@ -313,9 +312,8 @@ class Unet(nn.Module):
             layers_values.append(x)
             x = down(x)
         return layers_values , x
-    def upsample(self, x, time,layers_values):
-        for res1 , res2 , up in self.downs:
-            context = self.time_mlp(time)
+    def upsample(self, x, context,layers_values):
+        for up , res1 , res2 in self.ups:
             x = up(x)
             hidden_layer = layers_values.pop()
             x = torch.cat((x, hidden_layer), dim=1)
