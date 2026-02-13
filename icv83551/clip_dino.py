@@ -5,6 +5,7 @@ import numpy as np
 import clip
 from PIL import Image
 import tensorflow_datasets as tfds
+from torch.utils.data import TensorDataset, DataLoader
 from torchvision import transforms as T
 import cv2
 from tqdm.auto import tqdm
@@ -244,7 +245,15 @@ class DINOSegmentation:
             num_classes (int): Number of segmentation classes.
             inp_dim (int, optional): Dimensionality of the input DINO features.
         """
-
+        self.device = device
+        self.model = nn.Sequential(
+            nn.Linear(inp_dim, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+            nn.Linear(64, num_classes)
+        ).to(device)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), weight_decay=1e-2, lr=1e-3)
         ############################################################################
         # TODO: Define a very lightweight pytorch model, optimizer, and loss       #
         # function to train classify each DINO feature vector into a seg. class.   #
@@ -254,7 +263,6 @@ class DINOSegmentation:
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-        pass
 
     def train(self, X_train, Y_train, num_iters=500):
         """Train the segmentation model using the provided training data.
@@ -264,6 +272,9 @@ class DINOSegmentation:
             Y_train (torch.Tensor): Ground truth labels of shape (N,).
             num_iters (int, optional): Number of optimization steps.
         """
+        dataset = TensorDataset(X_train, Y_train)
+        dataloader = DataLoader(dataset, batch_size=256, shuffle=True)
+        history = train_model(self.model, self.optimizer, num_iters, dataloader , self.device)
         ############################################################################
         # TODO: Train your model for `num_iters` steps.                            #
         ############################################################################
@@ -271,7 +282,7 @@ class DINOSegmentation:
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-        pass
+        return history
     
     @torch.no_grad()
     def inference(self, X_test):
@@ -284,6 +295,10 @@ class DINOSegmentation:
             torch.Tensor of shape (N,): Predicted class indices.
         """
         pred_classes = None
+        self.model.eval()
+        X_test = X_test.to(self.device)
+        out = self.model(X_test)
+        pred_classes = torch.argmax(out, dim=1)
         ############################################################################
         # TODO: Train your model for `num_iters` steps.                            #
         ############################################################################
@@ -292,3 +307,43 @@ class DINOSegmentation:
         #                             END OF YOUR CODE                             #
         ############################################################################
         return pred_classes
+#CODE I MABE FORE TO TRAIN nn.sequintail models I am recycling it here
+def run_epoch(train_data, model, optimizer, device):
+    model.train()
+    total_loss = 0.0
+    correct_gusses = 0
+    count = 0
+    for images, labels in train_data:
+        images = images.to(device)
+        labels = labels.to(device)
+        batch_size = images.size(0)
+        count =count + batch_size
+        outputs = model(images)
+        loss_function = nn.CrossEntropyLoss()
+        loss = loss_function(outputs, labels)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item() * batch_size
+        _, prediction = torch.max(outputs.data, 1)
+        correct_gusses += int((prediction == labels).sum())
+
+    loss = total_loss / count
+    accuracy = 100 * (correct_gusses / count)
+    return loss, accuracy
+
+def train_model(model, optimizer, epochs, train_data , device):
+    print("starting training...")
+    model = model.to(device)
+    history = {
+        'train_loss': [],
+        'train_acc': [],
+    }
+    for epoch in range(epochs):
+        train_loss, train_acc = run_epoch(train_data, model, optimizer , device)
+        history['train_loss'].append(train_loss)
+        history['train_acc'].append(train_acc)
+        print(f"Epoch {epoch} / {epochs}")
+        print(f"train_loss - {train_loss} , train_acc - {train_acc}")
+
+    return history
