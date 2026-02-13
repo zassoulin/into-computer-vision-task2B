@@ -97,6 +97,9 @@ class GaussianDiffusion(nn.Module):
             x_start: (b, *) tensor. Starting image.
         """
         x_start = None
+        alpah_coefficients =  extract(self.sqrt_alphas_cumprod, t, x_t.shape)
+        alpah_minus_one_coefficients = extract(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape)
+        x_start = (x_t - alpah_minus_one_coefficients * noise) / alpah_coefficients
         ####################################################################
         # TODO:
         # Transform x_t and noise to get x_start according to Eq.(4) and Eq.(14).
@@ -116,6 +119,9 @@ class GaussianDiffusion(nn.Module):
             pred_noise: (b, *) tensor. Predicted noise.
         """
         pred_noise = None
+        alpah_coefficients =  extract(self.sqrt_alphas_cumprod, t, x_start.shape)
+        alpah_minus_one_coefficients = extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape)
+        pred_noise = (x_t - alpah_coefficients * x_start) / alpah_minus_one_coefficients
         ####################################################################
         # TODO:
         # Transform x_t and noise to get x_start according to Eq.(4) and Eq.(14).

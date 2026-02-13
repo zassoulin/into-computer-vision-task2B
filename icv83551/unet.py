@@ -170,7 +170,11 @@ class Unet(nn.Module):
         # Downsampling blocks
         ####################################################################
         for ind, (dim_in, dim_out) in enumerate(in_out):
-            down_block = None
+            down_block = nn.ModuleList(
+                [ResnetBlock(dim = dim_in, dim_out = dim_in, context_dim=context_dim),
+                 ResnetBlock(dim = dim_in, dim_out = dim_in, context_dim=context_dim),
+                 Downsample(dim = dim_in, dim_out = dim_out)]
+            )
             ##################################################################
             # TODO: Create one UNet downsampling layer `down_block` as a ModuleList.
             # It should be a ModuleList of 3 blocks [ResnetBlock, ResnetBlock, Downsample].
@@ -196,7 +200,13 @@ class Unet(nn.Module):
         # self.ups will also be a ModuleList of ModuleLists.
         # Each BlockList will contain 3 blocks [Upsample, ResnetBlock, ResnetBlock].
         for ind, (dim_in, dim_out) in enumerate(in_out_ups):
-            up_block = None
+            up_block = nn.ModuleList(
+                [
+                    Upsample(dim = dim_in, dim_out = dim_out),
+                    ResnetBlock(dim = 2 * dim_out, dim_out = dim_out, context_dim=context_dim),
+                    ResnetBlock(dim = 2 * dim_out, dim_out = dim_out, context_dim=context_dim)
+                ]
+            )
             ##################################################################
             # TODO: Create one UNet upsampling layer as a ModuleList.
             # It should be a ModuleList of 3 blocks [Upsample, ResnetBlock, ResnetBlock].
@@ -283,8 +293,35 @@ class Unet(nn.Module):
         ##################################################################
 
         ##################################################################
+        layers , x = self.downsample(x, time)
+        x = self.mid_block1(x, context = context)
+        x = self.mid_block2(x, context = context)
+        x = self.upsample(x, time, layers)
+
 
         # Final block
         x = self.final_conv(x)
 
         return x
+    def downsample(self, x, time):
+        layers_values = []
+        context = self.time_mlp(time)
+        for res1 , res2 , down in self.downs:
+            x = res1(x, context = context)
+            layers_values.append(x)
+            x = res2(x, context = context)
+            layers_values.append(x)
+            x = down(x)
+        return layers_values , x
+    def upsample(self, x, time,layers_values):
+        for res1 , res2 , up in self.downs:
+            context = self.time_mlp(time)
+            x = up(x)
+            hidden_layer = layers_values.pop()
+            x = torch.cat((x, hidden_layer), dim=1)
+            x = res1(x, context = context)
+            hidden_layer = layers_values.pop()
+            x = torch.cat((x, hidden_layer), dim=1)
+            x = res2(x, context = context)
+        return x
+
